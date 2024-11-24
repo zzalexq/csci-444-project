@@ -1,4 +1,18 @@
-# How to Generate Alignments Using Awesome Align
+## WORK TO BE DONE:
+- [ ] TEST UNMODIFIED MBART ON TEXT DATA
+- [x] PROCESS TEXT DATA FOR WORD ALIGNMENTS AND PAIRS
+- [ ] IDENTIFY ANCHOR POINT WORDS TO USE FROM ALIGNMENTS 
+- [ ] MODIFY MBART TO USE ANCHOR POINTS 
+- [ ] TEST MODIFIED MBART ON TEXT DATA
+- [ ] INCORPORATE RL 
+- [ ] TEST TEXT DATA WITH RL MODEL
+
+
+###  Download Data Source
+- https://drive.google.com/file/d/1Yvn5E2VLatwwvPVm7CSTIQIuTDR43DG8/view?usp=sharing
+- Extract and paste all files in directory 
+
+###  How to Generate Alignments Using Awesome Align
 DATA_FILE=./zhen.src-tgt
 MODEL_NAME_OR_PATH=./model_without_co
 OUTPUT_FILE=./output.txt
@@ -15,13 +29,4 @@ CUDA_VISIBLE_DEVICES=0 awesome-align \
     --output_word_file=$OUTPUT_WORDS \
     --output_prob_file=$OUTPUT_PROB 
 
-
-WORK TO BE DONE:
-- [ ] TEST UNMODIFIED MBART ON TEXT DATA
-- [x] PROCESS TEXT DATA FOR WORD ALIGNMENTS AND PAIRS
-- [ ] IDENTIFY ANCHOR POINT WORDS TO USE FROM ALIGNMENTS 
-- [ ] MODIFY MBART TO USE ANCHOR POINTS 
-- [ ] TEST MODIFIED MBART ON TEXT DATA
-- [ ] INCORPORATE RL 
-- [ ] TEST TEXT DATA WITH RL MODEL
 
