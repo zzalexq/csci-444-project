@@ -1,0 +1,12 @@
+venv
+alignments.txt
+alignments-prob.txt
+output.txt
+zhen.src-tgt
+unmodified_zh-en-translated_sentences.txt
+.DS_Store
+.idea/
+.ipynb_checkpoints
+FTIE/
+model_without_co
+/awesome-align/
