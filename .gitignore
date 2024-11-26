@@ -2,7 +2,7 @@ venv
 alignments.txt
 alignments-prob.txt
 output.txt
-zhen.src-tgt
+awesome-align/zhen.src-tgt
 unmodified_zh-en-translated_sentences.txt
 .DS_Store
 .idea/
@@ -10,3 +10,4 @@ unmodified_zh-en-translated_sentences.txt
 FTIE/
 model_without_co
 /awesome-align/
+/zhen.src-tgt
