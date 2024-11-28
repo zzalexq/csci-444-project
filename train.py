@@ -11,8 +11,8 @@ with open('tokens_to_be_added.txt', 'r', encoding='utf-8') as f:
 
 dataset = './training_data.csv'
 dataframe = pd.read_csv(dataset)
-train_df = dataframe[:10000]
-val_df = dataframe[10000:12000]
+train_df = dataframe[:100000]
+val_df = dataframe[100000:120000]
 
 train_dataset = Dataset.from_pandas(train_df)
 validation_dataset = Dataset.from_pandas(val_df)
