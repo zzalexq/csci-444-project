@@ -1,4 +1,5 @@
-from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments, MBartForConditionalGeneration, MBartTokenizer
+from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments, MBartForConditionalGeneration, MBartTokenizer, DataCollatorForSeq2Seq
+from sklearn.model_selection import train_test_split
 from datasets import Dataset
 import pandas as pd
 import torch
@@ -47,8 +48,11 @@ class WeightedLoss(nn.Module):
 
 dataset = './training_data.csv'
 dataframe = pd.read_csv(dataset)
-train_df = dataframe[:80000]
-val_df = dataframe[80000:10000]
+
+subset_df = dataframe.sample(n=100000, random_state=42)
+train_df, temp_df = train_test_split(subset_df, test_size=0.2, random_state=42)
+val_df, test_df = train_test_split(temp_df, test_size=0.5, random_state=42)
+
 
 train_dataset = Dataset.from_pandas(train_df)
 validation_dataset = Dataset.from_pandas(val_df)
@@ -64,34 +68,19 @@ model.resize_token_embeddings(len(tokenizer))
 
 # Prepare datasets
 def convert_examples_to_features(example_batch):
-    input_encodings = tokenizer(example_batch["zh"], padding="longest", truncation=True)
-    target_encodings = tokenizer(example_batch["en"], padding="longest", truncation=True)
+    input_encodings = tokenizer(example_batch["zh"],
+                                max_length=1024,
+                                padding="max_length",
+                                truncation=True)
+    target_encodings = tokenizer(example_batch["en"],
+                                 max_length=1024,
+                                 padding="max_length",
+                                 truncation=True)
     return {
         "input_ids": input_encodings["input_ids"],
         "attention_mask": input_encodings["attention_mask"],
         "labels": target_encodings["input_ids"],
     }
-
-
-def compute_metrics(pred):
-    labels = pred.label_ids
-    preds = pred.predictions
-
-    # Apply your anchor token mask here to evaluate how many anchor tokens are predicted correctly
-    anchor_tokens = tokens_to_be_added
-    anchor_ids = [tokenizer.convert_tokens_to_ids(t) for t in anchor_tokens]
-
-    correct = 0
-    total = 0
-
-    for label, pred in zip(labels, preds):
-        for l, p in zip(label, pred):
-            if l in anchor_ids:
-                total += 1
-                if l == p:
-                    correct += 1
-    accuracy = correct / total if total > 0 else 0
-    return {"anchor_accuracy": accuracy}
 
 train_dataset_tf = train_dataset.map(convert_examples_to_features, batched=True, remove_columns=["zh", "en"])
 val_dataset_tf = validation_dataset.map(convert_examples_to_features, batched=True, remove_columns=["zh", "en"])
@@ -102,8 +91,9 @@ training_args = Seq2SeqTrainingArguments(
     num_train_epochs=2,
     per_device_train_batch_size=1,  # Increased batch size
     per_device_eval_batch_size=1,
-    evaluation_strategy='epoch',
-    save_strategy='epoch',
+    evaluation_strategy='steps',  # Change evaluation strategy to steps
+    save_strategy='steps',  # Save based on steps
+    save_steps=2000,  # Save every 2000 steps, adjust as needed
     logging_steps=1000,
     weight_decay=0.01,
     push_to_hub=False,
@@ -111,23 +101,8 @@ training_args = Seq2SeqTrainingArguments(
     optim="adafactor",
 )
 
-# Data collator for seq2seq tasks
-from transformers import DataCollatorForSeq2Seq
 seq2seq_data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
-
-# Initialize the Trainer
-# trainer = Seq2SeqTrainer(
-#     model=model,
-#     args=training_args,
-#     tokenizer=tokenizer,
-#     data_collator=seq2seq_data_collator,
-#     train_dataset=train_dataset_tf,
-#     eval_dataset=val_dataset_tf,
-#     compute_metrics=compute_metrics
-# )
-#
 weighted_loss = WeightedLoss(tokenizer)
-
 
 class CustomSeq2SeqTrainer(Seq2SeqTrainer):
     def compute_loss(self, model, inputs, return_outputs=False):
