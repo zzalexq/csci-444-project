@@ -30,9 +30,7 @@ with torch.no_grad():
         num_beams=4  # Optional: use beam search for better quality
     )
 
-print(tokenizer.convert_tokens_to_ids("<investment_grade>"))
-print(tokenizer.convert_tokens_to_ids("<core_business>"))
 
 # Decode and print the result
-translated_text = tokenizer.decode(outputs[0], skip_special_tokens=False)
+translated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 print(f"Translated text: {translated_text}")

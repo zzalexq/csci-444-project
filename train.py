@@ -1,3 +1,5 @@
+import os
+
 from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments, MBartForConditionalGeneration, MBartTokenizer, DataCollatorForSeq2Seq
 from sklearn.model_selection import train_test_split
 from datasets import Dataset
@@ -89,16 +91,40 @@ val_df, test_df = train_test_split(temp_df, test_size=0.33, random_state=42)
 train_dataset = Dataset.from_pandas(train_df)
 validation_dataset = Dataset.from_pandas(val_df)
 
-# Load model and tokenizer
-model_name = "facebook/mbart-large-50-many-to-many-mmt"
-model = MBartForConditionalGeneration.from_pretrained(model_name)
-tokenizer = MBartTokenizer.from_pretrained(model_name)
+
+output_dir = 'mbartTrans'
+latest_checkpoint = max(
+    [os.path.join(output_dir, d) for d in os.listdir(output_dir) if d.startswith("checkpoint-")],
+    key=os.path.getmtime,
+    default=None
+)
+
+print(f"Latest checkpoint: {latest_checkpoint}")
+
+if latest_checkpoint is None:
+    # Load model and tokenizer
+    model_name = "facebook/mbart-large-50-many-to-many-mmt"
+    model = MBartForConditionalGeneration.from_pretrained(model_name)
+    tokenizer = MBartTokenizer.from_pretrained(model_name)
+
+    # Add custom tokens and resize model embeddings
+    tokenizer.add_tokens(tokens_to_be_added)
+    model.resize_token_embeddings(len(tokenizer))
+else:
+    model_name = "facebook/mbart-large-50-many-to-many-mmt"
+    model = MBartForConditionalGeneration.from_pretrained(latest_checkpoint)
+    tokenizer = MBartTokenizer.from_pretrained(model_name)
+    tokenizer.add_tokens(tokens_to_be_added)
+    model.resize_token_embeddings(len(tokenizer))
 
 device = torch.device("cpu")  # Enforce CPU usage
 
-# Add custom tokens and resize model embeddings
-tokenizer.add_tokens(tokens_to_be_added)
-model.resize_token_embeddings(len(tokenizer))
+
+if latest_checkpoint:
+    print(f"Resuming training from checkpoint: {latest_checkpoint}")
+else:
+    print("Starting training from scratch.")
+
 
 # Prepare datasets
 def convert_examples_to_features(example_batch):
@@ -168,8 +194,13 @@ trainer = CustomSeq2SeqTrainer(
 print(f"CUDA available: {torch.cuda.is_available()}")
 print(f"Model is on device: {next(model.parameters()).device}")
 
-# Train the model
-trainer.train()
+
+if latest_checkpoint:
+    print(f"Resuming training from checkpoint: {latest_checkpoint}")
+    trainer.train(resume_from_checkpoint=latest_checkpoint)
+else:
+    print("Starting training from scratch.")
+    trainer.train()
 
 # Save the model
 trainer.save_model("zhenTranslationMbart")
