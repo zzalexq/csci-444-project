@@ -117,8 +117,6 @@ else:
     tokenizer.add_tokens(tokens_to_be_added)
     model.resize_token_embeddings(len(tokenizer))
 
-device = torch.device("cpu")  # Enforce CPU usage
-
 
 if latest_checkpoint:
     print(f"Resuming training from checkpoint: {latest_checkpoint}")
