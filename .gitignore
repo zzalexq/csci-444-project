@@ -17,3 +17,5 @@ refactored_parallel_sentences.txt
 /mbartTrans/
 /mbartTrans.zip
 /checkpoint-28000.zip
+/old_mbart_trans/
+/cleaned_training_data.csv

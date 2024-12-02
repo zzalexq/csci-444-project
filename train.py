@@ -21,7 +21,6 @@ with open('final_anchors.txt', 'r', encoding='utf-8') as f:
 
 
 
-# Define a custom loss function that focuses on anchor tokens
 class WeightedLoss(nn.Module):
     def __init__(self, tokenizer, weight=2.0):
         super().__init__()
@@ -36,13 +35,7 @@ class WeightedLoss(nn.Module):
         }
 
     def forward(self, labels, logits, input_ids):
-        """
-        labels: Target token IDs (batch_size, seq_len)
-        logits: Model output logits (batch_size, seq_len, vocab_size)
-        input_ids: Source token IDs (batch_size, seq_len)
-        """
-        # Convert logits to predicted token IDs
-        pred = logits.argmax(dim=-1)
+        pred = logits.argmax(dim=-1)            # Convert logits to predicted token IDs
 
         # Cross entropy loss (default)
         loss_fct = nn.CrossEntropyLoss(reduction='none', ignore_index=self.pad_token_id)
@@ -53,7 +46,6 @@ class WeightedLoss(nn.Module):
 
         # Iterate through anchor token mappings
         for source_token, source_id in self.anchor_token_ids.items():
-            # Target token ID
             target_token = self._map_to_target(source_token)
             target_id = self.tokenizer.convert_tokens_to_ids(target_token)
 
@@ -67,7 +59,6 @@ class WeightedLoss(nn.Module):
 
         # Apply higher weight to mismatched anchors
         weighted_loss = base_loss + self.weight * anchor_mask
-
         return weighted_loss.mean()
 
     def _map_to_target(self, source_token):
@@ -79,15 +70,21 @@ class WeightedLoss(nn.Module):
         source_to_target_mapping = anchor_words_dict
         return source_to_target_mapping.get(source_token, source_token)  # Default to no change
 
+import pandas as pd
+import re
+from sklearn.model_selection import train_test_split
+from datasets import Dataset
 
-dataset = './training_data.csv'
-dataframe = pd.read_csv(dataset)
+# Load the dataset
+dataset = './cleaned_training_data.csv'
+df = pd.read_csv(dataset)
 
-subset_df = dataframe.sample(n=100000, random_state=42)
+# Now split the cleaned dataframe
+subset_df = df.sample(n=100000, random_state=42)
 train_df, temp_df = train_test_split(subset_df, test_size=0.3, random_state=42)
 val_df, test_df = train_test_split(temp_df, test_size=0.33, random_state=42)
 
-
+# Convert to HuggingFace Dataset objects
 train_dataset = Dataset.from_pandas(train_df)
 validation_dataset = Dataset.from_pandas(val_df)
 
@@ -127,11 +124,11 @@ else:
 # Prepare datasets
 def convert_examples_to_features(example_batch):
     input_encodings = tokenizer(example_batch["zh"],
-                                max_length=1024,
+                                max_length=1012,
                                 padding="max_length",
                                 truncation=True)
     target_encodings = tokenizer(example_batch["en"],
-                                 max_length=1024,
+                                 max_length=1012,
                                  padding="max_length",
                                  truncation=True)
     return {
@@ -144,16 +141,15 @@ train_dataset_tf = train_dataset.map(convert_examples_to_features, batched=True,
 val_dataset_tf = validation_dataset.map(convert_examples_to_features, batched=True, remove_columns=["zh", "en"])
 
 
-# Setup Seq2SeqTrainer
 training_args = Seq2SeqTrainingArguments(
     output_dir='mbartTrans',
     num_train_epochs=2,
     per_device_train_batch_size=1,
     per_device_eval_batch_size=1,
-    evaluation_strategy='epoch',  # Run evaluation only at the end of each epoch
+    evaluation_strategy='epoch',
     save_strategy='steps',
     save_steps=2000,
-    logging_steps=1000,
+    logging_steps=100,
     weight_decay=0.01,
     push_to_hub=False,
     learning_rate=2e-5,
@@ -170,10 +166,10 @@ class CustomSeq2SeqTrainer(Seq2SeqTrainer):
         outputs = model(**inputs)
         logits = outputs.logits
         labels = inputs.get("labels")
-        input_ids = inputs.get("input_ids")  # You need the input_ids to calculate the anchor loss
+        input_ids = inputs.get("input_ids")
 
         # Compute the weighted loss using our custom WeightedLoss
-        loss = weighted_loss(labels, logits, input_ids)  # Pass the input_ids here
+        loss = weighted_loss(labels, logits, input_ids)  # Pass the input_ids
 
         return (loss, outputs) if return_outputs else loss
 
