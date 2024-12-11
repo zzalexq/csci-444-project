@@ -1,4 +1,5 @@
 import os
+import random
 
 import torch
 from datasets import concatenate_datasets, Dataset
@@ -7,7 +8,7 @@ import pandas as pd
 from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments, MBartForConditionalGeneration, MBartTokenizer
 
 # Check if MPS is available
-device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+device = torch.device("cpu")
 print(f"Using device: {device}")
 
 # Load the dataset
@@ -32,40 +33,49 @@ print(f"Latest checkpoint: {latest_checkpoint}")
 
 
 # Load model and tokenizer from the latest checkpoint
-model = MBartForConditionalGeneration.from_pretrained(latest_checkpoint)
-tokenizer = MBartTokenizer.from_pretrained(latest_checkpoint)
+model_name = "facebook/mbart-large-50-many-to-many-mmt"
+model = MBartForConditionalGeneration.from_pretrained(model_name)
+tokenizer = MBartTokenizer.from_pretrained(model_name)
 
 tokenizer.src_lang = "zh_CN"  # Source language (Chinese)
 tokenizer.tgt_lang = "en_XX"  # Target language (English)
 
-output_file = "modified_model_test_translations.txt"
+output_file = "generated_outputs.txt"
 
 # Open the file in write mode
 with open(output_file, "w", encoding="utf-8") as f:
     print("Starting test_dataset translations total examples =", len(test_dataset))
     for idx, example in enumerate(test_dataset):
-        test_sentence = example['zh']
-        inputs = tokenizer(
-            test_sentence,
-            return_tensors="pt",
-            max_length=512,
-            padding="longest",
-            truncation=True
-        ).to(device)  # Move inputs to MPS
-
-        # Generate translation
-        model.eval()
-        with torch.no_grad():
-            outputs = model.generate(
-                input_ids=inputs["input_ids"],
-                attention_mask=inputs["attention_mask"],
+        generated_examples = []
+        for i in range(3):
+            test_sentence = example['zh']
+            inputs = tokenizer(
+                test_sentence,
+                return_tensors="pt",
                 max_length=512,
-            )
+                padding="longest",
+                truncation=True
+            ).to(device)  # Move inputs to MPS
 
-        translated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+            # Generate translation
+            model.eval()
+            with torch.no_grad():
+                outputs = model.generate(
+                    input_ids=inputs["input_ids"],
+                    attention_mask=inputs["attention_mask"],
+                    max_length=512,
+                    num_beams=random.randint(1, 4)
+                )
+
+            translated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+            generated_examples.append(translated_text)
 
         # Write translation to file
-        f.write(test_sentence + " ; " + translated_text + "\n")
+        line = ""
+        for sentence in generated_examples:
+            line += sentence.strip() + "; "
+
+        f.write(line + '\n')
 
         if idx % 100 == 0:
             print("Done with", idx, "out of", len(test_dataset))

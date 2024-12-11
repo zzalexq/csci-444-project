@@ -19,3 +19,4 @@ refactored_parallel_sentences.txt
 /checkpoint-28000.zip
 /old_mbart_trans/
 /cleaned_training_data.csv
+/mbart-rl-finetuned/
