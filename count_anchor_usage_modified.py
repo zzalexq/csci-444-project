@@ -15,17 +15,18 @@ total_anchor_words = 0
 correct_translations = 0
 
 # File path
-file_path = "modified_model_test_translations.txt" 
+file_path = "final_rl_translations.txt"
 
 # Process the file
 with open(file_path, "r", encoding="utf-8") as f:
     # for i, line in zip(range(5), f):
     for line in f:
         # Split the line into original sentence and translated text
-        test_sentence, translated_text = line.strip().split(" ; ")
+        test_sentence, translated_text = line.strip().split(" ; ", 1)
 
         # Regular expression to find anchor words
         anchor_words = re.findall(r"<([^>]+)>", test_sentence)
+
         # print(anchor_words)
 
         # Regular expression to find anchor translations
